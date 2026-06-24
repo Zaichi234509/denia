@@ -90,7 +90,7 @@ colors: {
 
 ## 🌐 Live Preview
 
-View the live version at: [GitHub Pages URL - to be configured]
+View the live version at: [https://zaichi234509.github.io/denia/]
 
 ## 📄 License
 
