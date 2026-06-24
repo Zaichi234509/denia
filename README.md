@@ -40,7 +40,7 @@ This project presents Denia's character information in the style of a classified
 
 ```
 denia/
-└── deepseek_html_20260624_3f889b.html    # Main HTML file (self-contained)
+└── denia.html    # Main HTML file (self-contained)
 ```
 
 ## 🚀 Usage
@@ -49,7 +49,7 @@ Simply open the HTML file in any modern web browser. No build process or depende
 
 ```bash
 # Open in browser
-open deepseek_html_20260624_3f889b.html
+open denia.html
 ```
 
 ## 🎨 Customization
