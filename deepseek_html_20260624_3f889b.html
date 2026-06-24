@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>[CLASSIFIED] Denia – Subject File #F-7741 | Wuthering Waves</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'void': '#050508',
+                        'noir': '#0D0A0F',
+                        'fusion': '#9B30FF',
+                        'silver': '#B8B8C0',
+                        'cyan-glitch': '#00E5FF',
+                        'wine': '#7B1FA2',
+                        'ice': '#E8E0F0',
+                        'redact': '#333340'
+                    },
+                    fontFamily: {
+                        'mono': ['JetBrains Mono', 'monospace'],
+                        'inter': ['Inter', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'fusion': '0 0 12px rgba(155,48,255,0.3), 0 0 40px rgba(155,48,255,0.1)',
+                        'cyan': '0 0 10px rgba(0,229,255,0.3), 0 0 25px rgba(0,229,255,0.1)'
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    <style>
+        /* Loading Screen */
+        .loader-screen {
+            position: fixed; inset: 0; z-index: 99999; background: #050508;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s ease, visibility 0.5s ease; opacity: 1; visibility: visible;
+        }
+        .loader-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .loader-glitch {
+            font-family: 'JetBrains Mono', monospace; font-size: 18px; color: #9B30FF;
+            letter-spacing: 0.15em; animation: glitch-text 1.2s ease-in-out infinite;
+        }
+        @keyframes glitch-text {
+            0%,100%{opacity:0.7;transform:translateX(0)}
+            10%{opacity:1;transform:translateX(-1px)}
+            20%{opacity:0.6;transform:translateX(1px)}
+            30%{opacity:1;transform:translateX(0)}
+        }
+        @media (prefers-reduced-motion: reduce) { .loader-screen { display: none; } }
+
+        /* Background video */
+        .video-background {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; overflow: hidden; z-index: -2; background: #050508;
+        }
+        .video-background video {
+            position: absolute; top: 50%; left: 50%; min-width: 100%; min-height: 100%;
+            width: auto; height: auto; transform: translate(-50%, -50%); object-fit: cover; opacity: 0.35;
+        }
+        .overlay { position: fixed; inset: 0; background: rgba(5,5,8,0.7); z-index: -1; }
+
+        /* Animations */
+        @media (prefers-reduced-motion: no-preference) {
+            .reveal-up {
+                opacity: 0; transform: translateY(20px);
+                transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .reveal-up.visible { opacity: 1; transform: translateY(0); }
+            .reveal-fade {
+                opacity: 0; transition: opacity 0.8s ease;
+            }
+            .reveal-fade.visible { opacity: 1; }
+            .stagger > * {
+                opacity: 0; transform: translateY(15px);
+                transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .stagger.visible > *:nth-child(1) { transition-delay: 0.04s; opacity: 1; transform: translateY(0); }
+            .stagger.visible > *:nth-child(2) { transition-delay: 0.10s; opacity: 1; transform: translateY(0); }
+            .stagger.visible > *:nth-child(3) { transition-delay: 0.16s; opacity: 1; transform: translateY(0); }
+            .stagger.visible > *:nth-child(4) { transition-delay: 0.22s; opacity: 1; transform: translateY(0); }
+            .stagger.visible > *:nth-child(5) { transition-delay: 0.28s; opacity: 1; transform: translateY(0); }
+            .stagger.visible > *:nth-child(6) { transition-delay: 0.34s; opacity: 1; transform: translateY(0); }
+            .glitch-hover:hover {
+                animation: glitch-shift 0.3s ease-in-out;
+            }
+            @keyframes glitch-shift {
+                0%,100%{transform:translate(0)}
+                25%{transform:translate(-2px,1px)}
+                50%{transform:translate(2px,-1px)}
+                75%{transform:translate(-1px,-2px)}
+            }
+            /* Modal */
+            .modal-enter { transition: opacity 0.3s ease, transform 0.3s ease; }
+            .modal-hidden { opacity: 0; pointer-events: none; transform: scale(0.95); }
+            .modal-visible { opacity: 1; transform: scale(1); pointer-events: auto; }
+        }
+        html { scroll-behavior: smooth; }
+        #particle-canvas { position: fixed; top: 0; left: 0; z-index: 1; pointer-events: none; }
+
+        /* Redacted text style */
+        .redacted {
+            background: #333340; border-radius: 3px; color: transparent; user-select: none;
+            display: inline-block; transition: all 0.3s ease;
+        }
+        .redacted:hover { background: transparent; color: inherit; }
+    </style>
+</head>
+<body class="bg-void text-ice font-inter overflow-x-hidden">
+
+    <!-- Loading Screen -->
+    <div id="loader" class="loader-screen">
+        <div class="loader-glitch">ACCESSING CLASSIFIED FILE…</div>
+    </div>
+
+    <!-- Background Video -->
+    <div class="video-background">
+        <video autoplay muted loop playsinline>
+            <source src="https://motionbgs.com/media/9669/denia-wuthering-waves.960x540.mp4" type="video/mp4">
+        </video>
+    </div>
+    <div class="overlay"></div>
+
+    <!-- Floating particles -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 w-full z-50 bg-void/90 backdrop-blur-md border-b border-fusion/20">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="font-mono text-xs text-fusion/70 tracking-widest">FILE #F-7741</span>
+                <span class="text-silver/40">|</span>
+                <span class="font-mono text-sm text-fusion tracking-wider">DENIA</span>
+            </div>
+            <div class="hidden md:flex gap-8 text-sm font-semibold">
+                <a href="#dossier" class="hover:text-fusion transition-colors duration-200 font-mono text-xs tracking-wider">DOSSIER</a>
+                <a href="#abilities" class="hover:text-fusion transition-colors duration-200 font-mono text-xs tracking-wider">CAPABILITIES</a>
+                <a href="#gallery" class="hover:text-fusion transition-colors duration-200 font-mono text-xs tracking-wider">SURVEILLANCE</a>
+                <a href="#join" class="px-4 py-2 bg-fusion/80 text-void rounded-full hover:bg-cyan-glitch transition-all duration-200 font-bold text-xs tracking-wider">ACCESS FILE</a>
+            </div>
+            <button class="md:hidden text-2xl text-silver" aria-label="Open menu"><i class="ph ph-list"></i></button>
+        </div>
+    </nav>
+
+    <!-- Hero Section (Classified Dossier) -->
+    <header class="relative min-h-screen flex items-center justify-center px-4 pt-16 z-10">
+        <div class="max-w-6xl w-full">
+            <!-- Classification banner -->
+            <div class="text-center mb-8 reveal-fade">
+                <p class="font-mono text-xs tracking-[0.3em] text-fusion/60 mb-2">■■■ CLASSIFIED ■■■</p>
+                <p class="font-mono text-[10px] tracking-[0.2em] text-silver/40">CLEARANCE LEVEL: OMEGA | EYES ONLY</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <!-- Left: Dossier card with portrait -->
+                <div class="reveal-up flex justify-center">
+                    <div class="relative w-72 md:w-80">
+                        <!-- Folder tab -->
+                        <div class="absolute -top-6 left-0 bg-fusion/30 px-6 py-1 rounded-t-lg font-mono text-xs text-fusion/70 tracking-wider">SUBJECT IMAGE</div>
+                        <div class="bg-noir border-2 border-fusion/25 rounded-lg overflow-hidden shadow-fusion p-2">
+                            <div class="relative overflow-hidden rounded">
+                                <img src="https://cdn.prydwen.gg/images/ww/characters/denia_card.webp"
+                                     alt="Denia classified portrait"
+                                     class="w-full h-auto object-cover glitch-hover"
+                                     loading="eager">
+                                <!-- Scan line overlay -->
+                                <div class="absolute inset-0 bg-gradient-to-b from-transparent via-fusion/5 to-transparent pointer-events-none"></div>
+                            </div>
+                            <div class="mt-3 px-2 pb-1 font-mono text-[10px] text-silver/50 space-y-1">
+                                <p>REF: ████████████</p>
+                                <p>DATE: [REDACTED]</p>
+                                <p>STATUS: <span class="text-fusion/70">ACTIVE ███████</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Dossier text -->
+                <div class="reveal-up space-y-6 text-center md:text-left">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-fusion/10 border border-fusion/25 rounded font-mono text-xs text-fusion tracking-wider">
+                        <i class="ph ph-shield-warning"></i> RESTRICTED ACCESS
+                    </div>
+                    <h1 class="text-5xl md:text-7xl font-mono font-bold tracking-tight">
+                        <span class="text-fusion drop-shadow-[0_0_14px_#9B30FF]">Denia</span>
+                    </h1>
+                    <div class="font-mono text-sm text-silver/50 space-y-1">
+                        <p>DESIGNATION: <span class="text-fusion/70">F-7741</span></p>
+                        <p>AFFILIATION: <span class="redacted px-12">████████████</span> <span class="text-silver/60 text-xs">// Startorch Academy</span></p>
+                        <p>CLASS: <span class="text-cyan-glitch/70">Congenital Resonator</span></p>
+                        <p>WEAPON: <span class="text-fusion/70">Rectifier</span> | ATTRIBUTE: <span class="text-fusion/70">Fusion</span></p>
+                    </div>
+                    <blockquote class="text-lg text-ice/70 border-l-2 border-fusion/40 pl-4 italic max-w-md mx-auto md:mx-0 font-inter">
+                        "Do not watch, do not listen, do not commit to memory… Some things are best left unknown."
+                    </blockquote>
+                    <div class="flex flex-wrap gap-4 justify-center md:justify-start">
+                        <button onclick="openModal()" class="px-8 py-3 bg-fusion text-void font-bold rounded-full shadow-fusion hover:bg-cyan-glitch transition-all duration-200 transform hover:scale-105 font-mono text-sm tracking-wider">
+                            <i class="ph ph-play mr-2"></i>VIEW FOOTAGE
+                        </button>
+                        <button class="px-8 py-3 border border-fusion/50 text-fusion rounded-full hover:bg-fusion/10 transition-all duration-200 transform hover:scale-105 font-mono text-sm tracking-wider">
+                            <i class="ph ph-file-lock mr-2"></i>REQUEST ACCESS
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dossier Section (About) -->
+    <section id="dossier" class="relative z-10 py-24 px-4 bg-gradient-to-b from-void via-noir/80 to-void/90">
+        <div class="max-w-5xl mx-auto">
+            <div class="reveal-fade text-center mb-12">
+                <p class="font-mono text-xs tracking-[0.3em] text-fusion/50 mb-2">■■■ DOSSIER ■■■</p>
+                <h2 class="text-4xl font-mono font-bold text-fusion">Subject Profile</h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 stagger">
+                <!-- Left: Full body -->
+                <div class="reveal-up flex justify-center md:col-span-1">
+                    <div class="w-full max-w-xs bg-noir border border-fusion/20 rounded-lg overflow-hidden shadow-fusion">
+                        <img src="https://static.wikia.nocookie.net/wutheringwaves/images/b/b2/Denia_Card.jpg/revision/latest?cb=20260327233110"
+                             alt="Denia full-body classified image"
+                             class="w-full h-auto"
+                             loading="lazy">
+                        <div class="p-3 font-mono text-[10px] text-silver/50 space-y-1 border-t border-fusion/15">
+                            <p>IMAGE ID: <span class="text-fusion/60">D-CARD-001</span></p>
+                            <p>VERIFIED: <span class="text-cyan-glitch/60">PARTIAL ████</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Dossier details -->
+                <div class="md:col-span-2 space-y-6">
+                    <div class="bg-noir border border-fusion/15 rounded-lg p-6 reveal-up">
+                        <h3 class="font-mono text-sm text-fusion/80 tracking-wider mb-4">BACKGROUND SUMMARY</h3>
+                        <p class="text-ice/70 leading-relaxed mb-3">
+                            Subject <strong class="text-fusion">Denia</strong> is a <span class="text-cyan-glitch/70">Congenital Resonator</span> currently enrolled at <strong class="text-silver">Startorch Academy's Department of Voidmatters</strong>. Public records indicate a diligent, soft‑spoken student with exceptional academic standing.
+                        </p>
+                        <p class="text-ice/70 leading-relaxed mb-3">
+                            Covert surveillance reveals a secondary identity: <strong class="text-wine">Fractsidus operative</strong>, planted by <span class="text-fusion/80">Schwarzloch</span> with the express purpose of becoming a <span class="text-cyan-glitch">Threnodian Resonator</span>. Subject demonstrates advanced deception capabilities, seamlessly maintaining multiple fabricated personas.
+                        </p>
+                        <div class="mt-4 p-4 bg-redact/20 border border-fusion/10 rounded font-mono text-xs text-silver/50">
+                            <p>⚠ NOTE: Subject is known to <span class="text-fusion/60">"wear many faces"</span>. All interactions should be treated as potentially compromised. Verify identity through <span class="redacted px-6">██████████</span> protocol.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 reveal-up">
+                        <div class="bg-noir border border-fusion/15 rounded-lg p-4 font-mono text-xs space-y-2">
+                            <p class="text-fusion/70 tracking-wider">IDENTIFIERS</p>
+                            <p class="text-silver/60">Birthplace: <span class="redacted px-8">████████</span></p>
+                            <p class="text-silver/60">Nation: <span class="text-fusion/60">Lahai-Roi</span></p>
+                            <p class="text-silver/60">Class: <span class="text-cyan-glitch/60">Congenital</span></p>
+                        </div>
+                        <div class="bg-noir border border-fusion/15 rounded-lg p-4 font-mono text-xs space-y-2">
+                            <p class="text-fusion/70 tracking-wider">KNOWN AFFILIATIONS</p>
+                            <p class="text-silver/60">Primary: <span class="text-wine/70">Fractsidus</span></p>
+                            <p class="text-silver/60">Cover: <span class="text-fusion/60">Startorch Academy</span></p>
+                            <p class="text-silver/60">Handler: <span class="redacted px-6">██████</span></p>
+                        </div>
+                    </div>
+
+                    <div class="reveal-up">
+                        <p class="font-mono text-xs text-silver/40 mb-2">SPECIAL DISH</p>
+                        <p class="text-ice/60 text-sm"><i class="ph ph-bowl-food text-fusion/60 mr-2"></i>Splendorous Sweetness — a confection as deceptive as its creator.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Abilities Section -->
+    <section id="abilities" class="relative z-10 py-24 px-4">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-12 reveal-fade">
+                <p class="font-mono text-xs tracking-[0.3em] text-fusion/50 mb-2">■■■ CAPABILITIES ■■■</p>
+                <h2 class="text-4xl font-mono font-bold text-fusion">Forte Assessment</h2>
+                <p class="text-silver/40 text-sm mt-2 font-mono">FORTe: "FLAWLESS" — CODEX: F-7741-Ω</p>
+            </div>
+
+            <div class="grid md:grid-cols-4 gap-5 stagger">
+                <!-- Basic Attack -->
+                <div class="bg-noir border border-fusion/15 rounded-lg p-5 hover:border-fusion/50 transition-all duration-300 hover:shadow-fusion group">
+                    <div class="font-mono text-[10px] text-fusion/40 mb-3 tracking-wider">PROTOCOL-01</div>
+                    <i class="ph ph-moon-stars text-3xl text-fusion mb-3 group-hover:text-cyan-glitch transition-colors"></i>
+                    <h3 class="font-mono text-sm text-ice mb-2">Dreamweaver's Banquet</h3>
+                    <p class="text-silver/50 text-xs leading-relaxed">Basic Attack – A hypnotic sequence of Rectifier strikes that lull enemies into a false sense of security before the final blow.</p>
+                </div>
+                <!-- Resonance Skill -->
+                <div class="bg-noir border border-fusion/15 rounded-lg p-5 hover:border-fusion/50 transition-all duration-300 hover:shadow-fusion group">
+                    <div class="font-mono text-[10px] text-fusion/40 mb-3 tracking-wider">PROTOCOL-02</div>
+                    <i class="ph ph-bubbles text-3xl text-fusion mb-3 group-hover:text-cyan-glitch transition-colors"></i>
+                    <h3 class="font-mono text-sm text-ice mb-2">Bubbles and Baits</h3>
+                    <p class="text-silver/50 text-xs leading-relaxed">Resonance Skill – Deploy illusory bubbles that distract and draw in targets. What looks harmless is never what it seems.</p>
+                </div>
+                <!-- Resonance Liberation -->
+                <div class="bg-noir border border-fusion/15 rounded-lg p-5 hover:border-fusion/50 transition-all duration-300 hover:shadow-fusion group">
+                    <div class="font-mono text-[10px] text-fusion/40 mb-3 tracking-wider">PROTOCOL-03</div>
+                    <i class="ph ph-mask-happy text-3xl text-fusion mb-3 group-hover:text-cyan-glitch transition-colors"></i>
+                    <h3 class="font-mono text-sm text-ice mb-2">Final Act</h3>
+                    <p class="text-silver/50 text-xs leading-relaxed">Resonance Liberation – The curtain falls. A devastating Fusion burst amplified by the echoes of every lie ever told.</p>
+                </div>
+                <!-- Forte Circuit -->
+                <div class="bg-noir border border-fusion/15 rounded-lg p-5 hover:border-fusion/50 transition-all duration-300 hover:shadow-fusion group">
+                    <div class="font-mono text-[10px] text-fusion/40 mb-3 tracking-wider">PROTOCOL-04</div>
+                    <i class="ph ph-shield-check text-3xl text-fusion mb-3 group-hover:text-cyan-glitch transition-colors"></i>
+                    <h3 class="font-mono text-sm text-ice mb-2">"Flawless"</h3>
+                    <p class="text-silver/50 text-xs leading-relaxed">Forte Circuit – Stack deception through combat. At maximum stacks, unleash an unblockable strike that ignores enemy defenses.</p>
+                </div>
+            </div>
+
+            <!-- Secondary skills -->
+            <div class="max-w-4xl mx-auto mt-8 grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
+                <div class="bg-noir/60 border border-fusion/10 rounded-lg p-3 text-center hover:border-fusion/30 transition-all font-mono text-xs">
+                    <p class="text-fusion/50 text-[10px] tracking-wider">INTRO</p>
+                    <p class="text-silver/60 mt-1">Formal Greetings</p>
+                </div>
+                <div class="bg-noir/60 border border-fusion/10 rounded-lg p-3 text-center hover:border-fusion/30 transition-all font-mono text-xs">
+                    <p class="text-fusion/50 text-[10px] tracking-wider">OUTRO</p>
+                    <p class="text-silver/60 mt-1">Unfinished Lies</p>
+                </div>
+                <div class="bg-noir/60 border border-fusion/10 rounded-lg p-3 text-center hover:border-fusion/30 transition-all font-mono text-xs">
+                    <p class="text-fusion/50 text-[10px] tracking-wider">INHERENT</p>
+                    <p class="text-silver/60 mt-1">Vestiges of Falsehood</p>
+                </div>
+                <div class="bg-noir/60 border border-fusion/10 rounded-lg p-3 text-center hover:border-fusion/30 transition-all font-mono text-xs">
+                    <p class="text-fusion/50 text-[10px] tracking-wider">TUNE BREAK</p>
+                    <p class="text-silver/60 mt-1">Shattered Hours</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Gallery Section -->
+    <section id="gallery" class="relative z-10 py-24 px-4 bg-gradient-to-t from-void via-noir/60 to-void/90">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-12 reveal-fade">
+                <p class="font-mono text-xs tracking-[0.3em] text-fusion/50 mb-2">■■■ SURVEILLANCE ■■■</p>
+                <h2 class="text-4xl font-mono font-bold text-fusion">Intercepted Visuals</h2>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 stagger">
+                <div class="aspect-square rounded-lg overflow-hidden border border-fusion/15 hover:border-fusion/50 transition-all duration-300 bg-noir">
+                    <img src="https://lblog.fp.guinfra.com/file/69e6f392c69961f9a6228e56ZiNhky0c03"
+                         alt="Denia surveillance capture 1" class="w-full h-full object-cover" loading="lazy">
+                </div>
+                <div class="aspect-square rounded-lg overflow-hidden border border-fusion/15 hover:border-fusion/50 transition-all duration-300 bg-noir">
+                    <img src="https://beneaththetangles.com/wp-content/uploads/2026/05/denia-wuwa-fanart-6-1024x701.jpg"
+                         alt="Denia surveillance capture 2" class="w-full h-full object-cover" loading="lazy">
+                </div>
+                <div class="aspect-square rounded-lg overflow-hidden border border-fusion/15 hover:border-fusion/50 transition-all duration-300 bg-noir">
+                    <img src="https://pbs.twimg.com/media/HJPBk12acAAF1oo.jpg"
+                         alt="Denia surveillance capture 3" class="w-full h-full object-cover" loading="lazy">
+                </div>
+                <div class="aspect-square rounded-lg overflow-hidden border border-fusion/15 hover:border-fusion/50 transition-all duration-300 bg-noir">
+                    <img src="https://staticg.sportskeeda.com/editor/2026/05/1e5d8-17791163839754-1920.jpg"
+                         alt="Denia surveillance capture 4" class="w-full h-full object-cover" loading="lazy">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="join" class="relative z-10 py-32 px-4 text-center">
+        <div class="max-w-4xl mx-auto reveal-up">
+            <p class="font-mono text-xs tracking-[0.3em] text-fusion/40 mb-4">■■■ RECRUITMENT ■■■</p>
+            <h2 class="text-5xl md:text-6xl font-mono font-bold text-fusion mb-6 drop-shadow-[0_0_18px_#9B30FF]">
+                False Promise for Tomorrow
+            </h2>
+            <p class="text-xl text-silver/50 mb-12 max-w-2xl mx-auto font-inter">
+                The Fractsidus are always watching. Will you answer the call — or become another name in the classified files?
+            </p>
+            <div class="flex flex-wrap gap-6 justify-center">
+                <a href="#" class="px-10 py-4 bg-fusion text-void font-bold text-lg rounded-full shadow-fusion hover:bg-cyan-glitch transition-all duration-200 transform hover:scale-105 font-mono tracking-wider">
+                    <i class="ph ph-fingerprint mr-2"></i>ACCEPT MISSION
+                </a>
+                <button onclick="openModal()" class="px-10 py-4 border-2 border-fusion/50 text-fusion font-bold text-lg rounded-full hover:bg-fusion/10 transition-all duration-200 font-mono tracking-wider">
+                    <i class="ph ph-play mr-2"></i>VIEW FOOTAGE
+                </button>
+            </div>
+            <p class="mt-8 text-silver/30 text-xs font-mono">EVENT: <span class="text-fusion/50">False Promise for Tomorrow</span> • FIRST OBSERVED: <span class="text-cyan-glitch/50">May 21, 2026</span></p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="relative z-10 border-t border-fusion/15 py-8 px-4 text-center text-silver/30 text-xs font-mono">
+        <p>■■■ FILE END ■■■</p>
+        <p class="mt-2">CLASSIFICATION: OMEGA | UNAUTHORIZED ACCESS WILL BE PROSECUTED</p>
+        <p class="mt-4 text-silver/20">© 2026 — Not affiliated with Kuro Games. All characters belong to their respective owners.</p>
+    </footer>
+
+    <!-- Gameplay Modal -->
+    <div id="gameplayModal" class="fixed inset-0 z-[9999] flex items-center justify-center modal-enter modal-hidden">
+        <div class="absolute inset-0 bg-black/85 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="relative w-full max-w-4xl mx-4 aspect-video bg-noir rounded-lg overflow-hidden border border-fusion/30 shadow-fusion z-10">
+            <button onclick="closeModal()" class="absolute top-4 right-4 z-20 bg-void/80 text-fusion hover:text-cyan-glitch rounded-full p-2 transition-colors"><i class="ph ph-x text-2xl"></i></button>
+            <iframe id="gameplayIframe" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen class="absolute inset-0 w-full h-full"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // ========== LOADING SCREEN ==========
+        window.addEventListener('load', function() {
+            const loader = document.getElementById('loader');
+            if (loader) {
+                setTimeout(function() {
+                    loader.classList.add('loader-hidden');
+                }, 800);
+            }
+        });
+
+        // ========== PARTICLE SYSTEM (Floating dust/data particles) ==========
+        (function() {
+            const canvas = document.getElementById('particle-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let particles = [], animationId;
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                initParticles();
+            }
+
+            function initParticles() {
+                const count = Math.floor(window.innerWidth * 0.06);
+                particles = Array.from({ length: count }, () => ({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 1.5 + 0.5,
+                    speedY: (Math.random() - 0.5) * 0.3,
+                    speedX: (Math.random() - 0.5) * 0.3,
+                    opacity: Math.random() * 0.5 + 0.2,
+                    color: Math.random() > 0.5 ? '155,48,255' : '0,229,255'
+                }));
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.x += p.speedX;
+                    p.y += p.speedY;
+                    if (p.x < 0) p.x = canvas.width;
+                    if (p.x > canvas.width) p.x = 0;
+                    if (p.y < 0) p.y = canvas.height;
+                    if (p.y > canvas.height) p.y = 0;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${p.color},${p.opacity})`;
+                    ctx.fill();
+                });
+                animationId = requestAnimationFrame(draw);
+            }
+
+            const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+            function handleMotionChange(e) {
+                if (e.matches) { cancelAnimationFrame(animationId); ctx.clearRect(0, 0, canvas.width, canvas.height); }
+                else draw();
+            }
+            mediaQuery.addEventListener('change', handleMotionChange);
+            window.addEventListener('resize', resize);
+            resize();
+            if (!mediaQuery.matches) draw();
+            else handleMotionChange(mediaQuery);
+        })();
+
+        // ========== SCROLL REVEALS ==========
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) entry.target.classList.add('visible');
+            });
+        }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
+        document.querySelectorAll('.reveal-up, .reveal-fade, .stagger').forEach(el => observer.observe(el));
+
+        // ========== GAMEPLAY MODAL ==========
+        const modal = document.getElementById('gameplayModal');
+        const iframe = document.getElementById('gameplayIframe');
+
+        function openModal() {
+            iframe.src = "https://www.youtube.com/embed/aKWE-ON3XSM?autoplay=1&mute=1";
+            modal.classList.remove('modal-hidden');
+            modal.classList.add('modal-visible');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            iframe.src = "";
+            modal.classList.remove('modal-visible');
+            modal.classList.add('modal-hidden');
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+    </script>
+</body>
+</html>
