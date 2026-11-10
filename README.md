@@ -6,7 +6,7 @@ A themed character dossier webpage for Denia from Wuthering Waves, designed with
 
 This project presents Denia's character information in the style of a classified government file, complete with:
 - Dark, noir-themed UI with fusion purple and cyan accents
-- **Multi-layer parallax backdrop** (far / near planes + pointer parallax)
+- **Multi-layer parallax backdrop** (far / mid / near planes + pointer parallax)
 - **Self-hosted media** — images ship with the repo
 - Animated particle system for atmospheric effects
 - Scroll-triggered reveal animations
@@ -16,7 +16,7 @@ This project presents Denia's character information in the style of a classified
 ## ✨ Features
 
 - **Classified Dossier Theme**: Military/intelligence aesthetic with redacted text elements
-- **Parallax Engine**: Scroll-driven depth for the backdrop planes and content blocks, plus eased pointer parallax on key cards — all disabled automatically under `prefers-reduced-motion`
+- **Parallax Engine**: Three backdrop planes travelling at different speeds and directions over the whole document, per-card depth planes in the gallery, scroll drift on content blocks and eased pointer parallax — all disabled automatically under `prefers-reduced-motion`
 - **Particle Animation System**: Floating dust/data particles in the background
 - **Interactive Elements**: 
   - Hover effects with glitch animations
@@ -68,26 +68,77 @@ python3 -m http.server 8080
 
 ## 🪄 Parallax
 
-The backdrop is a stack of two planes plus a set of content blocks, all driven by one
-rAF loop in `index.html`:
+One rAF loop in `index.html` drives four kinds of depth. Everything is expressed as
+CSS custom properties, so the motion composes with the reveal animations and hover
+transforms instead of overwriting them.
 
-| Plane | Element | Scroll speed | Pointer |
-|-------|---------|--------------|---------|
-| Far   | `assets/img/bg-stars.webp` | `-0.020` | `8px` |
-| Near  | `assets/img/bg-bubbles.webp` | `+0.012` | `14px` |
+### Backdrop planes
 
-Content blocks opt in with two attributes:
+The stage is `position: fixed`, so each plane's travel is driven by **document
+progress** (0 at the top, 1 at the bottom) rather than raw scroll offset. That is what
+keeps the backdrop in motion for the whole page — the previous build ran out of room
+after one viewport and then sat still.
+
+| Plane  | Source                    | Speed | Direction            | Pointer |
+|--------|---------------------------|-------|----------------------|---------|
+| Far    | `assets/img/bg-stars.webp`| `0.45`| drifts **down** with the page | `10px` |
+| Mid    | CSS gradients (no image)  | `-0.85`| drifts **up** against it | `20px` |
+| Near   | `assets/img/bg-bubbles.webp`| `-1`| drifts up, fastest    | `34px`  |
+
+Each plane is oversized by `--px-bleed` on every side and its travel is clamped to
+that same budget, so an edge can never come into view. Planes also get a subtle
+`scale()` over the scroll and the front two recede toward the footer — never to zero,
+so the depth survives to the end of the page.
+
+Config attributes:
 
 ```html
-<div class="px-item" data-px-drift="-0.048" data-px-tilt="12"> … </div>
+<div class="parallax-layer px-near"
+     data-px-speed="-1"      <!-- -1..1 fraction of the max travel; sign = direction -->
+     data-px-pointer="34"    <!-- pointer-tilt amplitude in px -->
+     data-px-scale="0.02"    <!-- zoom gained over the full scroll -->
+     data-px-fade="0.4"      <!-- recede over the last 40% of the page -->
+     data-px-opacity="0.34"> <!-- base opacity, preserved as the plane recedes -->
 ```
 
-* `data-px-drift` — how much the block lags behind the scroll (negative = farther away)
-* `data-px-tilt` — how far it follows the pointer, in pixels
+### Content blocks
 
-Both write into the `--px-x` / `--px-y` custom properties, so they compose with the
-scroll-reveal transitions instead of fighting them. When
-`prefers-reduced-motion: reduce` is set, every offset is pinned to `0` and the reveal animations are replaced by static styling.
+Blocks opt in with two attributes:
+
+```html
+<div class="px-item" data-px-drift="-0.077" data-px-tilt="12"> … </div>
+```
+
+* `data-px-drift` — how far the block lags behind the viewport centre. Multiplied by
+  the viewport height, so the same number behaves the same on any screen: `-0.077`
+  is roughly ±50px of travel. More negative = reads as farther away.
+* `data-px-tilt` — how far it follows the pointer, in px.
+
+Document-space centres are measured with the offset temporarily zeroed, so a block's
+offset can never feed back into its own measurement.
+
+### Gallery depth planes
+
+Each surveillance tile declares its own plane:
+
+```html
+<div class="px-item" data-px-drift="-0.075" data-px-depth="0.90"> … </div>
+```
+
+`data-px-depth` is the card's resting scale (`< 1` sits back, `> 1` comes forward).
+The engine derives brightness, saturation and stacking order from the same number, so
+deeper tiles are dimmer, desaturated and behind the front row — then lift on hover.
+
+### Accessibility & performance
+
+* Under `prefers-reduced-motion: reduce` every plane, drift and tilt is pinned to `0`
+  and the rAF loop is cancelled outright.
+* Touch devices (no hover pointer) get a gentle sway derived from scroll distance so
+  the parallax still reads without a cursor.
+* Layout is re-measured on resize (debounced), on `load`, on `document.fonts.ready`
+  and via a `ResizeObserver` on `body`, so late images can't leave stale offsets.
+* Only two properties change per frame per element (`--px-x` / `--px-y`, or
+  `--px-lx` / `--px-ly`), and no transition touches them.
 
 ## 🎨 Customization
 
