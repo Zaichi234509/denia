@@ -6,11 +6,10 @@ A themed character dossier webpage for Denia from Wuthering Waves, designed with
 
 This project presents Denia's character information in the style of a classified government file, complete with:
 - Dark, noir-themed UI with fusion purple and cyan accents
-- **Multi-layer parallax backdrop** (far / mid / near planes + pointer parallax)
-- **Self-hosted media** — every image and the background loop ship with the repo
+- **Multi-layer parallax backdrop** (far / near planes + pointer parallax)
+- **Self-hosted media** — images ship with the repo
 - Animated particle system for atmospheric effects
 - Scroll-triggered reveal animations
-- Interactive gameplay modal
 - Responsive design for all devices
 - Loading screen with glitch effects
 
@@ -19,9 +18,7 @@ This project presents Denia's character information in the style of a classified
 - **Classified Dossier Theme**: Military/intelligence aesthetic with redacted text elements
 - **Parallax Engine**: Scroll-driven depth for the backdrop planes and content blocks, plus eased pointer parallax on key cards — all disabled automatically under `prefers-reduced-motion`
 - **Particle Animation System**: Floating dust/data particles in the background
-- **Video Background**: A locally hosted, seamlessly looping 24s montage (`assets/video/denia-loop.mp4`) — no third-party hotlinking
 - **Interactive Elements**: 
-  - Gameplay video modal (YouTube embed)
   - Hover effects with glitch animations
   - Smooth scroll navigation
 - **Responsive Design**: Fully responsive layout using Tailwind CSS
@@ -35,7 +32,6 @@ This project presents Denia's character information in the style of a classified
   - Parallax engine (scroll + pointer)
   - Particle system
   - Scroll reveal animations
-  - Modal functionality
   - Loading screen logic
 - **Phosphor Icons**: Icon library
 - **Google Fonts**: Inter and JetBrains Mono
@@ -46,15 +42,12 @@ This project presents Denia's character information in the style of a classified
 denia/
 ├── index.html            # Main HTML file (self-contained apart from CDN CSS/fonts)
 └── assets/
-    ├── img/
+    └── img/
     │   ├── hero-portrait.webp      # Hero subject portrait (900×1200)
     │   ├── subject-fullbody.webp   # Dossier full-body plate (900×1203)
     │   ├── capture-01…04.webp      # Surveillance gallery tiles (640×640)
     │   ├── bg-stars.webp           # Far parallax plane (1920×1080)
     │   └── bg-bubbles.webp         # Near parallax plane (1920×1080)
-    └── video/
-        ├── denia-loop.mp4          # Background loop (1280×720, ~24s, silent)
-        └── poster.webp             # Video poster / fallback frame
 ```
 
 All media is committed to the repository, so the page renders identically offline and
@@ -75,13 +68,12 @@ python3 -m http.server 8080
 
 ## 🪄 Parallax
 
-The backdrop is a stack of three planes plus a set of content blocks, all driven by one
+The backdrop is a stack of two planes plus a set of content blocks, all driven by one
 rAF loop in `index.html`:
 
 | Plane | Element | Scroll speed | Pointer |
 |-------|---------|--------------|---------|
 | Far   | `assets/img/bg-stars.webp` | `-0.020` | `8px` |
-| Mid   | `assets/video/denia-loop.mp4` | `-0.006` | `5px` |
 | Near  | `assets/img/bg-bubbles.webp` | `+0.012` | `14px` |
 
 Content blocks opt in with two attributes:
@@ -95,8 +87,7 @@ Content blocks opt in with two attributes:
 
 Both write into the `--px-x` / `--px-y` custom properties, so they compose with the
 scroll-reveal transitions instead of fighting them. When
-`prefers-reduced-motion: reduce` is set, every offset is pinned to `0`, the video is
-paused and the reveal animations are replaced by static styling.
+`prefers-reduced-motion: reduce` is set, every offset is pinned to `0` and the reveal animations are replaced by static styling.
 
 ## 🎨 Customization
 

@@ -69,14 +69,11 @@
             position: absolute; left: -4%; width: 108%; top: -32%; height: 164%;
             will-change: transform; transform: translate3d(0,0,0);
         }
-        .parallax-layer > img,
-        .parallax-layer > video {
+        .parallax-layer > img {
             width: 100%; height: 100%; object-fit: cover; display: block;
         }
         /* far: deep violet star field */
         .px-far { opacity: 0.50; }
-        /* mid: the classified footage loop */
-        .px-mid { opacity: 0.58; }
         /* near: foreground bubbles, masked towards the edges */
         .px-near {
             opacity: 0.30;
@@ -143,10 +140,6 @@
                 50%{transform:translate(2px,-1px)}
                 75%{transform:translate(-1px,-2px)}
             }
-            /* Modal */
-            .modal-enter { transition: opacity 0.3s ease, transform 0.3s ease; }
-            .modal-hidden { opacity: 0; pointer-events: none; transform: scale(0.95); }
-            .modal-visible { opacity: 1; transform: scale(1); pointer-events: auto; }
         }
         html { scroll-behavior: smooth; }
         #particle-canvas { position: fixed; top: 0; left: 0; z-index: 1; pointer-events: none; }
@@ -176,12 +169,6 @@
         <!-- far layer: violet star field -->
         <div class="parallax-layer px-far" data-px-speed="-0.020" data-px-pointer="8">
             <img src="assets/img/bg-stars.webp" alt="" loading="eager" decoding="async">
-        </div>
-        <!-- mid layer: classified footage loop -->
-        <div class="parallax-layer px-mid" data-px-speed="-0.006" data-px-pointer="5">
-            <video id="bgVideo" autoplay muted loop playsinline preload="auto" poster="assets/video/poster.webp">
-                <source src="assets/video/denia-loop.mp4" type="video/mp4">
-            </video>
         </div>
         <!-- near layer: foreground bubbles -->
         <div class="parallax-layer px-near" data-px-speed="0.012" data-px-pointer="14">
@@ -273,9 +260,6 @@
                             "Do not watch, do not listen, do not commit to memory… Some things are best left unknown."
                         </blockquote>
                         <div class="flex flex-wrap gap-4 justify-center md:justify-start">
-                            <button onclick="openModal()" class="px-8 py-3 bg-fusion text-void font-bold rounded-full shadow-fusion hover:bg-cyan-glitch transition-all duration-200 transform hover:scale-105 font-mono text-sm tracking-wider">
-                                <i class="ph ph-play mr-2"></i>VIEW FOOTAGE
-                            </button>
                             <button class="px-8 py-3 border border-fusion/50 text-fusion rounded-full hover:bg-fusion/10 transition-all duration-200 transform hover:scale-105 font-mono text-sm tracking-wider">
                                 <i class="ph ph-file-lock mr-2"></i>REQUEST ACCESS
                             </button>
@@ -498,9 +482,6 @@
                     <a href="#" class="px-10 py-4 bg-fusion text-void font-bold text-lg rounded-full shadow-fusion hover:bg-cyan-glitch transition-all duration-200 transform hover:scale-105 font-mono tracking-wider">
                         <i class="ph ph-fingerprint mr-2"></i>ACCEPT MISSION
                     </a>
-                    <button onclick="openModal()" class="px-10 py-4 border-2 border-fusion/50 text-fusion font-bold text-lg rounded-full hover:bg-fusion/10 transition-all duration-200 font-mono tracking-wider">
-                        <i class="ph ph-play mr-2"></i>VIEW FOOTAGE
-                    </button>
                 </div>
                 <p class="mt-8 text-silver/30 text-xs font-mono">EVENT: <span class="text-fusion/50">False Promise for Tomorrow</span> • FIRST OBSERVED: <span class="text-cyan-glitch/50">May 21, 2026</span></p>
             </div>
@@ -513,15 +494,6 @@
         <p class="mt-2">CLASSIFICATION: OMEGA | UNAUTHORIZED ACCESS WILL BE PROSECUTED</p>
         <p class="mt-4 text-silver/20">© 2026 — Not affiliated with Kuro Games. All characters belong to their respective owners.</p>
     </footer>
-
-    <!-- Gameplay Modal -->
-    <div id="gameplayModal" class="fixed inset-0 z-[9999] flex items-center justify-center modal-enter modal-hidden">
-        <div class="absolute inset-0 bg-black/85 backdrop-blur-sm" onclick="closeModal()"></div>
-        <div class="relative w-full max-w-4xl mx-4 aspect-video bg-noir rounded-lg overflow-hidden border border-fusion/30 shadow-fusion z-10">
-            <button onclick="closeModal()" class="absolute top-4 right-4 z-20 bg-void/80 text-fusion hover:text-cyan-glitch rounded-full p-2 transition-colors"><i class="ph ph-x text-2xl"></i></button>
-            <iframe id="gameplayIframe" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen class="absolute inset-0 w-full h-full"></iframe>
-        </div>
-    </div>
 
     <script>
         // ========== LOADING SCREEN ==========
@@ -551,7 +523,6 @@
             const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
             const bgLayers  = Array.prototype.slice.call(stage.querySelectorAll('[data-px-speed]'));
             const pxItems   = Array.prototype.slice.call(document.querySelectorAll('[data-px-drift], [data-px-tilt]'));
-            const video     = document.getElementById('bgVideo');
 
             const clamp = function (v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); };
             const num = function (v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
@@ -654,7 +625,6 @@
 
             function applyMotionPreference() {
                 if (motionQuery.matches) {
-                    if (video) { video.pause(); }
                     pxItems.forEach(function (el) {
                         el.style.setProperty('--px-x', '0px');
                         el.style.setProperty('--px-y', '0px');
@@ -662,7 +632,6 @@
                     });
                     bgLayers.forEach(function (layer) { layer.style.transform = 'none'; });
                 } else {
-                    if (video) { video.play().catch(function () {}); }
                     measure();
                     schedule();
                 }
@@ -737,25 +706,6 @@
         }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
         document.querySelectorAll('.reveal-up, .reveal-fade, .stagger').forEach(el => observer.observe(el));
 
-        // ========== GAMEPLAY MODAL ==========
-        const modal = document.getElementById('gameplayModal');
-        const iframe = document.getElementById('gameplayIframe');
-
-        function openModal() {
-            iframe.src = "https://www.youtube.com/embed/aKWE-ON3XSM?autoplay=1&mute=1";
-            modal.classList.remove('modal-hidden');
-            modal.classList.add('modal-visible');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeModal() {
-            iframe.src = "";
-            modal.classList.remove('modal-visible');
-            modal.classList.add('modal-hidden');
-            document.body.style.overflow = '';
-        }
-
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
     </script>
 </body>
 </html>
