@@ -60,25 +60,44 @@
         @media (prefers-reduced-motion: reduce) { .loader-screen { display: none; } }
 
         /* ---------- Parallax Stage ---------- */
+        /* The stage is fixed, so a plane's travel is driven by document progress
+           rather than raw scroll offset. --px-bleed is the maximum travel each
+           plane is allowed; it must stay in sync with the `bleed` constant at the
+           top of the JS engine (viewH * 0.26). */
         .parallax-stage {
+            --px-bleed: 26vh;
             position: fixed; inset: 0; z-index: -3; overflow: hidden;
             background: radial-gradient(ellipse 90% 70% at 50% 8%, #170c28 0%, #0a0712 45%, #050508 100%);
             pointer-events: none;
         }
+        /* Planes are oversized by the bleed on every side, so any offset up to
+           --px-bleed still leaves the viewport fully covered — no gaps, ever. */
         .parallax-layer {
-            position: absolute; left: -4%; width: 108%; top: -32%; height: 164%;
-            will-change: transform; transform: translate3d(0,0,0);
+            position: absolute; left: -6%; width: 112%;
+            top: calc(-1 * (var(--px-bleed) + 4vh));
+            height: calc(100% + 2 * (var(--px-bleed) + 4vh));
+            transform: translate3d(var(--px-lx, 0px), var(--px-ly, 0px), 0) scale(var(--px-ls, 1));
+            will-change: transform;
         }
         .parallax-layer > img {
             width: 100%; height: 100%; object-fit: cover; display: block;
         }
-        /* far: deep violet star field */
-        .px-far { opacity: 0.50; }
-        /* near: foreground bubbles, masked towards the edges */
+        /* far: deep violet star field — travels least */
+        .px-far { opacity: 0.62; }
+        /* mid: fusion / cyan bloom, painted in CSS so it ships no extra bytes */
+        .px-mid {
+            opacity: 0.55;
+            background:
+                radial-gradient(ellipse 34% 44% at 22% 28%, rgba(155,48,255,0.30), transparent 72%),
+                radial-gradient(ellipse 30% 38% at 80% 58%, rgba(0,229,255,0.16), transparent 74%),
+                radial-gradient(ellipse 46% 32% at 48% 86%, rgba(123,31,162,0.34), transparent 72%),
+                radial-gradient(ellipse 20% 24% at 62% 18%, rgba(232,224,240,0.10), transparent 76%);
+        }
+        /* near: foreground bubbles, masked towards the edges — travels most */
         .px-near {
-            opacity: 0.30;
-            -webkit-mask-image: radial-gradient(ellipse 76% 62% at 50% 44%, transparent 26%, #000 100%);
-            mask-image: radial-gradient(ellipse 76% 62% at 50% 44%, transparent 26%, #000 100%);
+            opacity: 0.34;
+            -webkit-mask-image: radial-gradient(ellipse 78% 64% at 50% 44%, transparent 24%, #000 100%);
+            mask-image: radial-gradient(ellipse 78% 64% at 50% 44%, transparent 24%, #000 100%);
         }
         .px-scan {
             position: fixed; inset: 0; z-index: -2; pointer-events: none;
@@ -99,38 +118,76 @@
             background:
                 radial-gradient(ellipse 62% 52% at 50% 48%, rgba(5,5,8,0.55) 0%, rgba(5,5,8,0.18) 55%, transparent 100%),
                 radial-gradient(ellipse 78% 62% at 50% 42%, transparent 22%, rgba(5,5,8,0.72) 100%),
-                linear-gradient(180deg, rgba(5,5,8,0.92) 0%, rgba(5,5,8,0.62) 13%, rgba(5,5,8,0.22) 28%, rgba(5,5,8,0) 40%, rgba(5,5,8,0) 68%, rgba(5,5,8,0.92) 100%);
+                linear-gradient(180deg, rgba(5,5,8,0.92) 0%, rgba(5,5,8,0.62) 13%, rgba(5,5,8,0.22) 24%, rgba(5,5,8,0) 34%, rgba(5,5,8,0) 74%, rgba(5,5,8,0.55) 90%, rgba(5,5,8,0.88) 100%);
+            /* As the visitor approaches the footer the bottom band of the
+               vignette (the heaviest gradient stop) fades back, so the moving
+               planes stay visible behind the CTA instead of the depth vanishing
+               for the last two screens. Only opacity is animated, so this
+               composes with the layered background. */
+            /* No transition here: --px-bottom-clear is written every frame while
+               scrolling, so a transition would restart constantly and lag. */
+            opacity: calc(1 - var(--px-bottom-clear, 0) * 0.55);
         }
 
         /* ---------- Parallax item plumbing ---------- */
-        .px-item { transform: translate3d(var(--px-x, 0px), var(--px-y, 0px), 0); will-change: transform; }
+        /* The JS engine writes --px-x / --px-y (scroll drift + pointer tilt) on
+           every [data-px-drift] / [data-px-tilt] block. Entrance animations use
+           the separate `translate` property, so the two never overwrite each
+           other. No transition here: this value changes every frame. */
+        .px-item {
+            transform: translate3d(var(--px-x, 0px), var(--px-y, 0px), 0);
+            will-change: transform;
+            backface-visibility: hidden;
+        }
+
+        /* ---------- Layered gallery ---------- */
+        /* Cards sit on different depth planes: the JS scales each by its
+           data-px-depth, CSS gives the plane visual hierarchy (size + light). */
+        /* depth cards overlap when the front one scales up, so they need their
+           own stacking context for the z-index the engine assigns */
+        .px-item[data-px-depth] { position: relative; }
+        .gal-card {
+            transform: scale(var(--gal-scale, 1));
+            filter: brightness(var(--gal-light, 1)) saturate(var(--gal-sat, 1));
+            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+                        filter 0.5s ease, box-shadow 0.5s ease, border-color 0.3s ease;
+        }
+        .gal-front {
+            box-shadow: 0 18px 50px -18px rgba(155, 48, 255, 0.55),
+                        0 0 0 1px rgba(0, 229, 255, 0.18);
+        }
+        .gal-card:hover {
+            --gal-scale: calc(var(--gal-depth-scale, 1) * 1.06);
+            --gal-light: 1.12;
+            --gal-sat: 1.12;
+        }
 
         /* ---------- Animations ---------- */
         @media (prefers-reduced-motion: no-preference) {
+            /* NOTE: entrance reveals animate ONLY opacity + translateY(decorative
+               offset). They never touch the drift variable, so the scroll parallax
+               written by the engine is preserved while a block fades in. */
             .reveal-up {
                 opacity: 0;
-                transform: translate3d(var(--px-x, 0px), calc(var(--px-y, 0px) + 20px), 0);
-                transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+                translate: 0 20px;
+                transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), translate 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             }
-            .reveal-up.visible {
-                opacity: 1;
-                transform: translate3d(var(--px-x, 0px), var(--px-y, 0px), 0);
-            }
+            .reveal-up.visible { opacity: 1; translate: 0 0; }
             .reveal-fade {
                 opacity: 0; transition: opacity 0.8s ease;
             }
             .reveal-fade.visible { opacity: 1; }
             .stagger > * {
                 opacity: 0;
-                transform: translate3d(var(--px-x, 0px), calc(var(--px-y, 0px) + 15px), 0);
-                transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1), transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+                translate: 0 15px;
+                transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1), translate 0.45s cubic-bezier(0.4, 0, 0.2, 1);
             }
-            .stagger.visible > *:nth-child(1) { transition-delay: 0.04s; opacity: 1; transform: translate3d(var(--px-x, 0px), var(--px-y, 0px), 0); }
-            .stagger.visible > *:nth-child(2) { transition-delay: 0.10s; opacity: 1; transform: translate3d(var(--px-x, 0px), var(--px-y, 0px), 0); }
-            .stagger.visible > *:nth-child(3) { transition-delay: 0.16s; opacity: 1; transform: translate3d(var(--px-x, 0px), var(--px-y, 0px), 0); }
-            .stagger.visible > *:nth-child(4) { transition-delay: 0.22s; opacity: 1; transform: translate3d(var(--px-x, 0px), var(--px-y, 0px), 0); }
-            .stagger.visible > *:nth-child(5) { transition-delay: 0.28s; opacity: 1; transform: translate3d(var(--px-x, 0px), var(--px-y, 0px), 0); }
-            .stagger.visible > *:nth-child(6) { transition-delay: 0.34s; opacity: 1; transform: translate3d(var(--px-x, 0px), var(--px-y, 0px), 0); }
+            .stagger.visible > *:nth-child(1) { transition-delay: 0.04s; opacity: 1; translate: 0 0; }
+            .stagger.visible > *:nth-child(2) { transition-delay: 0.10s; opacity: 1; translate: 0 0; }
+            .stagger.visible > *:nth-child(3) { transition-delay: 0.16s; opacity: 1; translate: 0 0; }
+            .stagger.visible > *:nth-child(4) { transition-delay: 0.22s; opacity: 1; translate: 0 0; }
+            .stagger.visible > *:nth-child(5) { transition-delay: 0.28s; opacity: 1; translate: 0 0; }
+            .stagger.visible > *:nth-child(6) { transition-delay: 0.34s; opacity: 1; translate: 0 0; }
             .glitch-hover:hover {
                 animation: glitch-shift 0.3s ease-in-out;
             }
@@ -151,9 +208,20 @@
         }
         .redacted:hover { background: transparent; color: inherit; }
 
+        /* Tall/short viewports: keep the pointer tilt available but never let the
+           scroll offsets run away on very large screens. */
+        @media (max-height: 620px) {
+            .parallax-stage { --px-bleed: 18vh; }
+        }
+
         @media (prefers-reduced-motion: reduce) {
             .px-scan::after { animation: none; }
-            .parallax-layer, .px-item, .reveal-up, .stagger > * { transform: none !important; }
+            .parallax-layer { transform: none !important; }
+            .px-item { transform: none !important; }
+            .reveal-up, .reveal-fade, .stagger > * {
+                opacity: 1 !important; translate: none !important; transition: none !important;
+            }
+            .gal-card { transform: none; filter: none; }
         }
     </style>
 </head>
@@ -165,13 +233,28 @@
     </div>
 
     <!-- ============ PARALLAX BACKDROP ============ -->
+    <!-- data-px-speed    : fraction of the plane's max travel covered per scroll
+                          unit. Sign decides direction: + moves down the page with
+                          you (a farther, slower-feeling plane), − moves against it.
+         data-px-pointer  : pointer-tilt amplitude in px.
+         data-px-scale    : subtle zoom over the scroll (far plane only).
+         data-px-fade     : plane fades out over the last part of its travel. -->
     <div class="parallax-stage" aria-hidden="true">
-        <!-- far layer: violet star field -->
-        <div class="parallax-layer px-far" data-px-speed="-0.020" data-px-pointer="8">
+        <!-- far layer: violet star field — slow, almost stationary depth -->
+        <div class="parallax-layer px-far"
+             data-px-speed="0.45" data-px-pointer="10" data-px-scale="0.05"
+             data-px-opacity="0.62">
             <img src="assets/img/bg-stars.webp" alt="" loading="eager" decoding="async">
         </div>
-        <!-- near layer: foreground bubbles -->
-        <div class="parallax-layer px-near" data-px-speed="0.012" data-px-pointer="14">
+        <!-- mid layer: fusion bloom, painted in CSS so it costs no extra bytes -->
+        <div class="parallax-layer px-mid"
+             data-px-speed="-0.85" data-px-pointer="20" data-px-scale="0.04"
+             data-px-fade="0.5" data-px-opacity="0.55">
+        </div>
+        <!-- near layer: foreground bubbles — fastest, drifts against the page -->
+        <div class="parallax-layer px-near"
+             data-px-speed="-1" data-px-pointer="34" data-px-scale="0.02"
+             data-px-fade="0.4" data-px-opacity="0.34">
             <img src="assets/img/bg-bubbles.webp" alt="" loading="eager" decoding="async">
         </div>
     </div>
@@ -211,7 +294,7 @@
             <div class="grid md:grid-cols-2 gap-12 items-center">
                 <!-- Left: Dossier card with portrait -->
                 <div class="reveal-up flex justify-center">
-                    <div class="px-item w-72 md:w-80" data-px-tilt="12" data-px-drift="-0.048">
+                    <div class="px-item w-72 md:w-80" data-px-tilt="12" data-px-drift="-0.077">
                         <div class="relative">
                             <!-- Folder tab -->
                             <div class="absolute -top-6 left-0 bg-fusion/40 px-6 py-1 rounded-t-lg font-mono text-xs text-fusion tracking-wider shadow-[0_0_14px_rgba(155,48,255,0.35)]">SUBJECT IMAGE</div>
@@ -243,7 +326,7 @@
 
                 <!-- Right: Dossier text -->
                 <div class="reveal-up text-center md:text-left">
-                    <div class="px-item space-y-6" data-px-drift="-0.016">
+                    <div class="px-item space-y-6" data-px-drift="-0.026">
                         <div class="inline-flex items-center gap-2 px-3 py-1 bg-fusion/10 border border-fusion/25 rounded font-mono text-xs text-fusion tracking-wider">
                             <i class="ph ph-shield-warning"></i> RESTRICTED ACCESS
                         </div>
@@ -281,7 +364,7 @@
             <div class="grid md:grid-cols-3 gap-8 stagger">
                 <!-- Left: Full body -->
                 <div class="reveal-up flex justify-center md:col-span-1">
-                    <div class="px-item w-full max-w-xs" data-px-tilt="8" data-px-drift="-0.038">
+                    <div class="px-item w-full max-w-xs" data-px-tilt="8" data-px-drift="-0.061">
                         <div class="bg-noir border border-fusion/20 rounded-lg overflow-hidden shadow-fusion">
                             <img src="assets/img/subject-fullbody.webp"
                                  alt="Denia full-body classified image"
@@ -298,7 +381,7 @@
 
                 <!-- Right: Dossier details -->
                 <div class="md:col-span-2 space-y-6">
-                    <div class="px-item" data-px-drift="-0.014">
+                    <div class="px-item" data-px-drift="-0.022">
                         <div class="bg-noir border border-fusion/15 rounded-lg p-6 reveal-up">
                             <h3 class="font-mono text-sm text-fusion/80 tracking-wider mb-4">BACKGROUND SUMMARY</h3>
                             <p class="text-ice/70 leading-relaxed mb-3">
@@ -348,7 +431,7 @@
 
             <div class="grid md:grid-cols-4 gap-5 stagger">
                 <!-- Basic Attack -->
-                <div class="px-item" data-px-drift="-0.022">
+                <div class="px-item" data-px-drift="-0.035">
                     <div class="h-full bg-noir border border-fusion/15 rounded-lg p-5 hover:border-fusion/50 transition-all duration-300 hover:shadow-fusion group">
                         <div class="font-mono text-[10px] text-fusion/40 mb-3 tracking-wider">PROTOCOL-01</div>
                         <i class="ph ph-moon-stars text-3xl text-fusion mb-3 group-hover:text-cyan-glitch transition-colors"></i>
@@ -357,7 +440,7 @@
                     </div>
                 </div>
                 <!-- Resonance Skill -->
-                <div class="px-item" data-px-drift="-0.034">
+                <div class="px-item" data-px-drift="-0.054">
                     <div class="h-full bg-noir border border-fusion/15 rounded-lg p-5 hover:border-fusion/50 transition-all duration-300 hover:shadow-fusion group">
                         <div class="font-mono text-[10px] text-fusion/40 mb-3 tracking-wider">PROTOCOL-02</div>
                         <i class="ph ph-circles-four text-3xl text-fusion mb-3 group-hover:text-cyan-glitch transition-colors"></i>
@@ -366,7 +449,7 @@
                     </div>
                 </div>
                 <!-- Resonance Liberation -->
-                <div class="px-item" data-px-drift="-0.046">
+                <div class="px-item" data-px-drift="-0.074">
                     <div class="h-full bg-noir border border-fusion/15 rounded-lg p-5 hover:border-fusion/50 transition-all duration-300 hover:shadow-fusion group">
                         <div class="font-mono text-[10px] text-fusion/40 mb-3 tracking-wider">PROTOCOL-03</div>
                         <i class="ph ph-mask-happy text-3xl text-fusion mb-3 group-hover:text-cyan-glitch transition-colors"></i>
@@ -375,7 +458,7 @@
                     </div>
                 </div>
                 <!-- Forte Circuit -->
-                <div class="px-item" data-px-drift="-0.058">
+                <div class="px-item" data-px-drift="-0.093">
                     <div class="h-full bg-noir border border-fusion/15 rounded-lg p-5 hover:border-fusion/50 transition-all duration-300 hover:shadow-fusion group">
                         <div class="font-mono text-[10px] text-fusion/40 mb-3 tracking-wider">PROTOCOL-04</div>
                         <i class="ph ph-shield-check text-3xl text-fusion mb-3 group-hover:text-cyan-glitch transition-colors"></i>
@@ -387,25 +470,25 @@
 
             <!-- Secondary skills -->
             <div class="max-w-4xl mx-auto mt-8 grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
-                <div class="px-item" data-px-drift="-0.026">
+                <div class="px-item" data-px-drift="-0.042">
                     <div class="h-full bg-noir/60 border border-fusion/10 rounded-lg p-3 text-center hover:border-fusion/30 transition-all font-mono text-xs">
                         <p class="text-fusion/50 text-[10px] tracking-wider">INTRO</p>
                         <p class="text-silver/60 mt-1">Formal Greetings</p>
                     </div>
                 </div>
-                <div class="px-item" data-px-drift="-0.038">
+                <div class="px-item" data-px-drift="-0.061">
                     <div class="h-full bg-noir/60 border border-fusion/10 rounded-lg p-3 text-center hover:border-fusion/30 transition-all font-mono text-xs">
                         <p class="text-fusion/50 text-[10px] tracking-wider">OUTRO</p>
                         <p class="text-silver/60 mt-1">Unfinished Lies</p>
                     </div>
                 </div>
-                <div class="px-item" data-px-drift="-0.050">
+                <div class="px-item" data-px-drift="-0.080">
                     <div class="h-full bg-noir/60 border border-fusion/10 rounded-lg p-3 text-center hover:border-fusion/30 transition-all font-mono text-xs">
                         <p class="text-fusion/50 text-[10px] tracking-wider">INHERENT</p>
                         <p class="text-silver/60 mt-1">Vestiges of Falsehood</p>
                     </div>
                 </div>
-                <div class="px-item" data-px-drift="-0.062">
+                <div class="px-item" data-px-drift="-0.099">
                     <div class="h-full bg-noir/60 border border-fusion/10 rounded-lg p-3 text-center hover:border-fusion/30 transition-all font-mono text-xs">
                         <p class="text-fusion/50 text-[10px] tracking-wider">TUNE BREAK</p>
                         <p class="text-silver/60 mt-1">Shattered Hours</p>
@@ -423,8 +506,8 @@
                 <h2 class="text-4xl font-mono font-bold text-fusion">Intercepted Visuals</h2>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 stagger">
-                <div class="px-item" data-px-drift="-0.026" data-px-tilt="6">
-                    <div class="relative aspect-square rounded-lg overflow-hidden border border-fusion/15 hover:border-fusion/50 transition-all duration-300 bg-noir">
+                <div class="px-item" data-px-drift="-0.120" data-px-tilt="8" data-px-depth="0.90">
+                    <div class="gal-card relative aspect-square rounded-lg overflow-hidden border border-fusion/15 hover:border-fusion/50 bg-noir">
                         <img src="assets/img/capture-01.webp"
                              alt="Denia surveillance capture 1" class="w-full h-full object-cover" width="640" height="640" loading="lazy" decoding="async">
                         <div class="absolute inset-0 bg-gradient-to-t from-void/70 via-transparent to-transparent pointer-events-none"></div>
@@ -433,8 +516,8 @@
                         <span class="absolute bottom-2 right-2 font-mono text-[9px] text-silver/50">F-7741</span>
                     </div>
                 </div>
-                <div class="px-item" data-px-drift="-0.042" data-px-tilt="6">
-                    <div class="relative aspect-square rounded-lg overflow-hidden border border-fusion/15 hover:border-fusion/50 transition-all duration-300 bg-noir">
+                <div class="px-item" data-px-drift="-0.072" data-px-tilt="8" data-px-depth="0.965">
+                    <div class="gal-card relative aspect-square rounded-lg overflow-hidden border border-fusion/15 hover:border-fusion/50 bg-noir">
                         <img src="assets/img/capture-02.webp"
                              alt="Denia surveillance capture 2" class="w-full h-full object-cover" width="640" height="640" loading="lazy" decoding="async">
                         <div class="absolute inset-0 bg-gradient-to-t from-void/70 via-transparent to-transparent pointer-events-none"></div>
@@ -443,8 +526,8 @@
                         <span class="absolute bottom-2 right-2 font-mono text-[9px] text-silver/50">F-7741</span>
                     </div>
                 </div>
-                <div class="px-item" data-px-drift="-0.058" data-px-tilt="6">
-                    <div class="relative aspect-square rounded-lg overflow-hidden border border-fusion/15 hover:border-fusion/50 transition-all duration-300 bg-noir">
+                <div class="px-item" data-px-drift="-0.029" data-px-tilt="8" data-px-depth="1.04">
+                    <div class="gal-card gal-front relative aspect-square rounded-lg overflow-hidden border border-cyan-glitch/25 hover:border-fusion/50 bg-noir">
                         <img src="assets/img/capture-03.webp"
                              alt="Denia surveillance capture 3" class="w-full h-full object-cover" width="640" height="640" loading="lazy" decoding="async">
                         <div class="absolute inset-0 bg-gradient-to-t from-void/70 via-transparent to-transparent pointer-events-none"></div>
@@ -453,8 +536,8 @@
                         <span class="absolute bottom-2 right-2 font-mono text-[9px] text-silver/50">F-7741</span>
                     </div>
                 </div>
-                <div class="px-item" data-px-drift="-0.074" data-px-tilt="6">
-                    <div class="relative aspect-square rounded-lg overflow-hidden border border-fusion/15 hover:border-fusion/50 transition-all duration-300 bg-noir">
+                <div class="px-item" data-px-drift="-0.099" data-px-tilt="8" data-px-depth="0.93">
+                    <div class="gal-card relative aspect-square rounded-lg overflow-hidden border border-fusion/15 hover:border-fusion/50 bg-noir">
                         <img src="assets/img/capture-04.webp"
                              alt="Denia surveillance capture 4" class="w-full h-full object-cover" width="640" height="640" loading="lazy" decoding="async">
                         <div class="absolute inset-0 bg-gradient-to-t from-void/70 via-transparent to-transparent pointer-events-none"></div>
@@ -470,7 +553,7 @@
     <!-- CTA Section -->
     <section id="join" class="relative z-10 py-32 px-4 text-center">
         <div class="max-w-4xl mx-auto reveal-up">
-            <div class="px-item" data-px-drift="-0.030">
+            <div class="px-item" data-px-drift="-0.048">
                 <p class="font-mono text-xs tracking-[0.3em] text-fusion/40 mb-4">■■■ RECRUITMENT ■■■</p>
                 <h2 class="text-5xl md:text-6xl font-mono font-bold text-fusion mb-6 drop-shadow-[0_0_18px_#9B30FF]">
                     False Promise for Tomorrow
@@ -512,109 +595,216 @@
         })();
 
         // ========== PARALLAX ENGINE ==========
-        // Three coordinated layers of depth:
-        //   1. background layers  -> scroll-driven drift at different speeds
-        //   2. content blocks     -> "drift" offset relative to the viewport centre
-        //   3. accent blocks      -> pointer-driven micro-parallax
+        // Four coordinated planes of depth, all driven by one rAF loop:
+        //   1. backdrop planes  -> travel across the whole document, different
+        //                          speeds, opposite directions, subtle zoom
+        //   2. gallery cards    -> each on its own depth plane (size + light)
+        //   3. content blocks   -> drift away from the viewport centre
+        //   4. accent blocks    -> eased pointer tilt
+        //
+        // Design notes
+        //   * Planes are `position: fixed`, so travel is a function of DOCUMENT
+        //     PROGRESS, not raw scroll offset. That is what keeps a fixed
+        //     backdrop moving for the entire page instead of running out of room
+        //     after one viewport (the old approach).
+        //   * Travel is injected as CSS custom properties (--px-x / --px-y for
+        //     content, --px-lx / --px-ly for planes), never as inline transforms,
+        //     so it composes with the reveal animations and hover effects
+        //     instead of fighting them.
+        //   * No CSS transition ever touches those properties: a transition on an
+        //     every-frame property smears the motion into mush.
         (function () {
             const stage = document.querySelector('.parallax-stage');
             if (!stage) return;
 
             const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-            const bgLayers  = Array.prototype.slice.call(stage.querySelectorAll('[data-px-speed]'));
-            const pxItems   = Array.prototype.slice.call(document.querySelectorAll('[data-px-drift], [data-px-tilt]'));
+            const coarse      = window.matchMedia('(hover: none)');
 
-            const clamp = function (v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); };
             const num = function (v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+            const clamp = function (v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); };
+            const smooth = function (t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 
-            let scrollY = window.scrollY || 0;
-            const pointer = { x: 0, y: 0 };
-            const eased  = { x: 0, y: 0 };
+            const planes = Array.prototype.slice.call(stage.querySelectorAll('[data-px-speed]'));
+            const cards  = Array.prototype.slice.call(document.querySelectorAll('[data-px-depth]'));
+            const items  = Array.prototype.slice.call(document.querySelectorAll('[data-px-drift], [data-px-tilt]'));
+            const vignette = document.querySelector('.px-vignette');
+
+            // ---- shared state -----------------------------------------------------
+            let scrollY   = window.scrollY || 0;
+            let viewH     = window.innerHeight;
+            let viewW     = window.innerWidth;
+            let docHeight = 1;
+            let bleed     = viewH * 0.26;   // travel budget; mirrors --px-bleed in CSS
+            const pointer = { x: 0, y: 0 }; // target, -1..1
+            const eased   = { x: 0, y: 0 }; // smoothed, -1..1
             let rafId = null;
 
-            // Cache each drifting element's *untransformed* document-space centre so the
-            // offset never feeds back into itself.
-            function measure() {
-                pxItems.forEach(function (el) {
-                    if (!el.hasAttribute('data-px-drift')) return;
-                    const rect = el.getBoundingClientRect();
-                    const applied = num(el.dataset.appliedY);
-                    el.dataset.baseCenter = String(rect.top + scrollY - applied + rect.height / 2);
+            function readViewport() {
+                viewH     = window.innerHeight;
+                viewW     = window.innerWidth;
+                docHeight = Math.max(1, document.documentElement.scrollHeight);
+                bleed     = viewH * (viewH < 620 ? 0.18 : 0.26);
+                stage.style.setProperty('--px-bleed', bleed.toFixed(0) + 'px');
+            }
+
+            // ---- 1. backdrop planes ----------------------------------------------
+            // progress: 0 at the top of the document, 1 at the bottom. Each plane
+            // maps that to a signed offset capped at `bleed`, so the oversized
+            // plane can never expose an edge. Signs: +drifts down with the page
+            // (reads as distant), -drifts up against it (reads as close).
+            function renderPlanes(progress, pointerReady) {
+                const swing = (progress * 2 - 1) * bleed;
+
+                for (let i = 0; i < planes.length; i++) {
+                    const el   = planes[i];
+                    const speed= num(el.dataset.pxSpeed);
+                    const pAmp = num(el.dataset.pxPointer);
+                    const zoom = num(el.dataset.pxScale);
+                    const fade = num(el.dataset.pxFade);
+                    const base = el.hasAttribute('data-px-opacity') ? num(el.dataset.pxOpacity) : 1;
+
+                    const travel = clamp(swing * speed, -bleed, bleed);
+                    const x = pointerReady ? eased.x * pAmp : 0;
+                    const y = pointerReady ? eased.y * pAmp * 0.55 : 0;
+
+                    el.style.setProperty('--px-lx', x.toFixed(2) + 'px');
+                    el.style.setProperty('--px-ly', (travel + y).toFixed(2) + 'px');
+                    if (zoom) el.style.setProperty('--px-ls', (1 + smooth(progress) * zoom).toFixed(4));
+                    if (fade) {
+                        // Hold full strength, then ease the plane *back* near the
+                        // end of the page — but never to zero: a residual floor
+                        // keeps the depth alive behind the CTA and footer.
+                        const floor = 0.38;
+                        const recede = smooth((progress - (1 - fade)) / fade);
+                        el.style.opacity = (base * (floor + (1 - floor) * (1 - recede))).toFixed(3);
+                    } else {
+                        el.style.opacity = base.toFixed(3);
+                    }
+                }
+            }
+
+            // ---- 2. gallery cards: a static depth plane each ---------------------
+            // Size/light are set once per measurement — the travel itself comes
+            // from each card's own data-px-drift, handled by renderItems below.
+            function applyCardDepth() {
+                for (let i = 0; i < cards.length; i++) {
+                    const el = cards[i];
+                    const scale = clamp(num(el.dataset.pxDepth), 0.80, 1.05);
+                    el.style.setProperty('--gal-scale', scale.toFixed(3));
+                    el.style.setProperty('--gal-depth-scale', scale.toFixed(3));
+                    const deeper = clamp((1 - scale) / 0.08, 0, 1);   // 0 = front row
+                    el.style.setProperty('--gal-light', (1 - deeper * 0.14).toFixed(3));
+                    el.style.setProperty('--gal-sat', (1 - deeper * 0.22).toFixed(3));
+                    el.style.zIndex = String(10 - Math.round(deeper * 8));
+                }
+            }
+
+            // ---- 3 + 4. content blocks and pointer tilt --------------------------
+            // Document-space centres are cached (with drift temporarily zeroed) so
+            // the offset a block receives can never feed back into its own base.
+            let itemBases = [];
+
+            function measureItems() {
+                itemBases = items.map(function (el) {
+                    if (!el.hasAttribute('data-px-drift')) return null;
+                    const prev = el.style.getPropertyValue('--px-y');
+                    el.style.setProperty('--px-y', '0px');       // measure untranslated
+                    const box = el.getBoundingClientRect();
+                    el.style.setProperty('--px-y', prev || '0px');
+                    return box.top + scrollY + box.height / 2;
                 });
             }
 
-            function render() {
-                if (motionQuery.matches) return;   // reduced motion: hold everything still
-                const height = window.innerHeight;
-                const maxShift = height * 0.25;
+            function renderItems(pointerReady) {
+                const focus = scrollY + viewH * 0.5;
 
-                // --- background layers -------------------------------------------------
-                bgLayers.forEach(function (layer) {
-                    const speed = num(layer.dataset.pxSpeed);
-                    const pointerAmp = num(layer.dataset.pxPointer);
-                    const shift = clamp(scrollY * speed, -maxShift, maxShift);
-                    const x = eased.x * pointerAmp;
-                    const y = shift + eased.y * pointerAmp * 0.6;
-                    layer.style.transform = 'translate3d(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px,0)';
-                });
-
-                // --- content blocks ----------------------------------------------------
-                const viewportCentre = scrollY + height / 2;
-                for (let i = 0; i < pxItems.length; i++) {
-                    const el = pxItems[i];
+                for (let i = 0; i < items.length; i++) {
+                    const el = items[i];
                     let x = 0, y = 0;
 
+                    // drift: blocks lag behind the viewport centre. Depth is scaled
+                    // up so it is actually perceptible, then capped so nothing
+                    // pulls away from its own text flow.
                     if (el.hasAttribute('data-px-drift')) {
                         const depth = num(el.dataset.pxDrift);
-                        const base = num(el.dataset.baseCenter);
+                        const base  = itemBases[i];
                         if (base) {
-                            y += clamp((base - viewportCentre) * depth, -height * 0.16, height * 0.16);
+                            const dist = clamp((base - focus) / (viewH * 0.5), -1.6, 1.6);
+                            y = dist * depth * viewH * 0.55;
                         }
                     }
-                    if (el.hasAttribute('data-px-tilt')) {
+                    if (el.hasAttribute('data-px-tilt') && pointerReady) {
                         const amp = num(el.dataset.pxTilt);
-                        x += eased.x * amp;
+                        x = eased.x * amp;
                         y += eased.y * amp;
                     }
 
-                    el.dataset.appliedY = String(y);
                     el.style.setProperty('--px-x', x.toFixed(2) + 'px');
                     el.style.setProperty('--px-y', y.toFixed(2) + 'px');
                 }
             }
 
-            function tick() {
-                // ease the pointer towards its target for a soft, weighty feel
-                eased.x += (pointer.x - eased.x) * 0.08;
-                eased.y += (pointer.y - eased.y) * 0.08;
-                render();
+            // ---- frame -----------------------------------------------------------
+            function render(pointerReady) {
+                const maxScroll = Math.max(1, docHeight - viewH);
+                const progress  = clamp(scrollY / maxScroll, 0, 1);
 
-                if (Math.abs(pointer.x - eased.x) > 0.001 || Math.abs(pointer.y - eased.y) > 0.001) {
-                    rafId = requestAnimationFrame(tick);
-                } else {
-                    rafId = null;
+                renderPlanes(progress, pointerReady);
+                renderItems(pointerReady);
+
+                if (vignette) {
+                    // let a little more of the moving backdrop through down-page
+                    vignette.style.setProperty('--px-bottom-clear', progress.toFixed(2));
                 }
+            }
+
+            function tick() {
+                const dx = pointer.x - eased.x;
+                const dy = pointer.y - eased.y;
+                eased.x += dx * 0.08;
+                eased.y += dy * 0.08;
+
+                const settled = Math.abs(dx) < 0.0015 && Math.abs(dy) < 0.0015;
+                if (settled) { eased.x = pointer.x; eased.y = pointer.y; }
+
+                render(!motionQuery.matches);
+                rafId = settled ? null : requestAnimationFrame(tick);
             }
 
             function schedule() {
                 if (rafId === null) rafId = requestAnimationFrame(tick);
             }
 
-            // --- events ---------------------------------------------------------------
+            // ---- lifecycle -------------------------------------------------------
+            let resizeTimer = null;
+            function remeasure() {
+                readViewport();
+                measureItems();
+                applyCardDepth();
+            }
+
             window.addEventListener('scroll', function () {
+                if (motionQuery.matches) return;
                 scrollY = window.scrollY || 0;
+
+                // Touch devices have no hover pointer, so derive a gentle sway from
+                // scroll distance — otherwise phones would only see the planes move.
+                if (coarse.matches) {
+                    pointer.x = Math.sin(scrollY * 0.0016) * 0.55;
+                    pointer.y = Math.cos(scrollY * 0.00128) * 0.35;
+                }
                 schedule();
             }, { passive: true });
 
             window.addEventListener('resize', function () {
-                measure();
-                schedule();
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function () { remeasure(); schedule(); }, 120);
             });
 
             window.addEventListener('pointermove', function (e) {
                 if (motionQuery.matches) return;
-                pointer.x = (e.clientX / window.innerWidth - 0.5) * 2;
-                pointer.y = (e.clientY / window.innerHeight - 0.5) * 2;
+                pointer.x = clamp((e.clientX / viewW - 0.5) * 2, -1, 1);
+                pointer.y = clamp((e.clientY / viewH - 0.5) * 2, -1, 1);
                 schedule();
             }, { passive: true });
 
@@ -623,23 +813,47 @@
                 schedule();
             });
 
+            // Late images/fonts can change the page height — remeasure when they land.
+            window.addEventListener('load', function () { remeasure(); schedule(); });
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(function () { remeasure(); schedule(); });
+            }
+            if ('ResizeObserver' in window) {
+                new ResizeObserver(function () {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(function () { remeasure(); schedule(); }, 160);
+                }).observe(document.body);
+            }
+
             function applyMotionPreference() {
                 if (motionQuery.matches) {
-                    pxItems.forEach(function (el) {
+                    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+                    pointer.x = pointer.y = eased.x = eased.y = 0;
+                    planes.forEach(function (el) {
+                        el.style.setProperty('--px-lx', '0px');
+                        el.style.setProperty('--px-ly', '0px');
+                        el.style.setProperty('--px-ls', '1');
+                        el.style.opacity = '';
+                    });
+                    items.forEach(function (el) {
                         el.style.setProperty('--px-x', '0px');
                         el.style.setProperty('--px-y', '0px');
-                        el.dataset.appliedY = '0';
                     });
-                    bgLayers.forEach(function (layer) { layer.style.transform = 'none'; });
+                    cards.forEach(function (el) {
+                        el.style.setProperty('--gal-light', '1');
+                        el.style.setProperty('--gal-sat', '1');
+                        el.style.zIndex = '';
+                    });
+                    if (vignette) vignette.style.setProperty('--px-bottom-clear', '0');
                 } else {
-                    measure();
+                    remeasure();
                     schedule();
                 }
             }
-
             motionQuery.addEventListener('change', applyMotionPreference);
 
-            measure();
+            // first paint
+            remeasure();
             applyMotionPreference();
         })();
 
